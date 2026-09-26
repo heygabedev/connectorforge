@@ -9,8 +9,31 @@ import typer
 import uvicorn
 
 from connectorforge.config import Settings, require_safe_sqlite, sqlite_is_patched
+from connectorforge.database import Database
 
 app = typer.Typer(no_args_is_help=True, help="Run and inspect a local ConnectorForge workspace.")
+
+
+@app.command()
+def setup() -> None:
+    """Create an empty workspace with the current database schema."""
+    database = Database(Settings.from_env())
+    try:
+        database.initialize()
+        typer.echo(f"Workspace ready: {database.path}")
+    finally:
+        database.close()
+
+
+@app.command()
+def migrate() -> None:
+    """Apply the application's database migrations."""
+    database = Database(Settings.from_env())
+    try:
+        database.migrate()
+        typer.echo(f"Database revision: {database.revision()}")
+    finally:
+        database.close()
 
 
 @app.command()
