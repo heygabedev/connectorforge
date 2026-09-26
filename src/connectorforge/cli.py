@@ -10,6 +10,7 @@ import uvicorn
 
 from connectorforge.config import Settings, require_safe_sqlite, sqlite_is_patched
 from connectorforge.database import Database
+from connectorforge.security import Role, issue_login_code
 
 app = typer.Typer(no_args_is_help=True, help="Run and inspect a local ConnectorForge workspace.")
 
@@ -32,6 +33,20 @@ def migrate() -> None:
     try:
         database.migrate()
         typer.echo(f"Database revision: {database.revision()}")
+    finally:
+        database.close()
+
+
+@app.command("login-code")
+def login_code(role: str = "admin") -> None:
+    """Issue a ten-minute, single-use code for a local demo role."""
+    if role not in {"admin", "operator", "viewer"}:
+        raise typer.BadParameter("Choose admin, operator, or viewer")
+    database = Database(Settings.from_env())
+    try:
+        database.initialize()
+        selected: Role = role  # type: ignore[assignment]
+        typer.echo(issue_login_code(database, selected))
     finally:
         database.close()
 

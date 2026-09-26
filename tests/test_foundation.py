@@ -29,7 +29,7 @@ def test_settings_reject_invalid_port(tmp_path: Path) -> None:
 
 
 def test_health(tmp_path: Path) -> None:
-    with TestClient(create_app(Settings(tmp_path))) as client:
+    with TestClient(create_app(Settings(tmp_path)), base_url="http://127.0.0.1:8000") as client:
         assert client.get("/healthz").json()["status"] == "ok"
 
 

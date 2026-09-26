@@ -30,6 +30,7 @@ dev = [
   "hypothesis>=6.125,<7",
   "bandit>=1.8,<2",
   "pip-audit>=2.8,<3",
+  "httpx2>=2,<3",
 ]
 
 [tool.hatch.build.targets.wheel]

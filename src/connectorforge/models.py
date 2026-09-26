@@ -53,3 +53,25 @@ class Job(Base):
     error: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[float] = mapped_column(Float, default=time.time)
     updated_at: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class LoginCode(Base):
+    __tablename__ = "login_codes"
+    digest: Mapped[str] = mapped_column(String(64), primary_key=True)
+    role: Mapped[str] = mapped_column(String(16))
+    expires_at: Mapped[float] = mapped_column(Float)
+
+
+class AccessToken(Base):
+    __tablename__ = "access_tokens"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    digest: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    kind: Mapped[str] = mapped_column(String(16))
+    name: Mapped[str] = mapped_column(String(80))
+    role: Mapped[str] = mapped_column(String(16))
+    scopes: Mapped[list[str]] = mapped_column(JSON)
+    connectors: Mapped[list[str]] = mapped_column(JSON)
+    operations: Mapped[list[str]] = mapped_column(JSON)
+    csrf: Mapped[str | None] = mapped_column(String(64))
+    expires_at: Mapped[float] = mapped_column(Float)
+    revoked: Mapped[bool] = mapped_column(default=False)
