@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select
 
 from connectorforge import __version__
+from connectorforge.catalog import router as catalog_router
 from connectorforge.config import Settings
 from connectorforge.database import Database
 from connectorforge.models import Audit, Job
@@ -39,6 +40,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.add_exception_handler(Problem, handle_problem)  # type: ignore[arg-type]
     application.add_exception_handler(RequestValidationError, handle_validation)  # type: ignore[arg-type]
     application.include_router(security_router)
+    application.include_router(catalog_router)
 
     @application.get("/healthz", tags=["health"])
     def health() -> dict[str, str]:
