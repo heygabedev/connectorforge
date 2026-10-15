@@ -15,6 +15,8 @@ dependencies = [
   "httpx>=0.28,<1",
   "sqlalchemy>=2.0,<3",
   "alembic>=1.15,<2",
+  "pyyaml>=6,<7",
+  "jsonschema>=4.23,<5",
 ]
 
 [project.scripts]
@@ -32,6 +34,8 @@ dev = [
   "pip-audit>=2.8,<3",
   "httpx2>=2,<3",
   "detect-secrets>=1.5,<2",
+  "types-pyyaml>=6.0.12.20260906",
+  "types-jsonschema>=4.26.0.20261006",
 ]
 
 [tool.hatch.build.targets.wheel]
