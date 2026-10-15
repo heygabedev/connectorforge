@@ -1,5 +1,6 @@
 """Application entry point."""
 
+import asyncio
 from collections import deque
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -14,10 +15,12 @@ from connectorforge import __version__
 from connectorforge.catalog import router as catalog_router
 from connectorforge.config import Settings
 from connectorforge.database import Database
+from connectorforge.jobs import router as jobs_router
 from connectorforge.models import Audit, Job
 from connectorforge.problems import Problem, handle_problem, handle_validation
 from connectorforge.security import SecurityBoundary, require
 from connectorforge.security import router as security_router
+from connectorforge.worker import Supervisor, stop_worker
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -28,9 +31,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         database = Database(settings)
         database.initialize()
         application.state.db = database
+        application.state.supervisor = Supervisor(database)
+        worker = asyncio.create_task(application.state.supervisor.run())
         try:
             yield
         finally:
+            await stop_worker(worker)
             database.close()
 
     application = FastAPI(title="ConnectorForge", version=__version__, lifespan=lifespan)
@@ -41,6 +47,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.add_exception_handler(RequestValidationError, handle_validation)  # type: ignore[arg-type]
     application.include_router(security_router)
     application.include_router(catalog_router)
+    application.include_router(jobs_router)
 
     @application.get("/healthz", tags=["health"])
     def health() -> dict[str, str]:

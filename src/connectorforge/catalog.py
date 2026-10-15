@@ -205,22 +205,24 @@ def list_releases(slug: str, request: Request) -> list[dict[str, Any]]:
 
 
 @router.post("/{slug}/releases", status_code=201)
-def create_release(slug: str, data: ReleaseInput, request: Request) -> dict[str, str]:
+async def create_release(slug: str, data: ReleaseInput, request: Request) -> dict[str, str]:
     principal = require(request, "manage", slug)
-    release_id = store_release(
-        request.app.state.db,
-        build_bundle(
-            slug,
-            data.version,
-            data.source,
-            mappings={
+    bundle = await request.app.state.supervisor.execute(
+        "compile",
+        {
+            "slug": slug,
+            "version": data.version,
+            "source": data.source,
+            "mappings": {
                 key: [field.model_dump() for field in fields]
                 for key, fields in data.mappings.items()
             },
-            fixtures={key: fixture.model_dump() for key, fixture in data.fixtures.items()},
-        ),
+            "fixtures": {key: fixture.model_dump() for key, fixture in data.fixtures.items()},
+        },
         principal.id,
+        slug,
     )
+    release_id = store_release(request.app.state.db, bundle, principal.id)
     return {"id": release_id, "version": data.version}
 
 

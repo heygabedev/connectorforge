@@ -1,0 +1,9 @@
+{
+  "dataset_version": "1.0.0",
+  "seed": 17,
+  "cases": [
+    {"id": "list-items", "input": {"operation_id": "listItems"}, "expected": {"kind": "success", "status": 200, "data": ["sample"]}},
+    {"id": "malformed-json", "input": {"operation_id": "listItems", "fault": "malformed"}, "expected": {"kind": "error", "code": "response_contract"}},
+    {"id": "unexpected-argument", "input": {"operation_id": "listItems", "arguments": {"query": {"unexpected": true}}}, "expected": {"kind": "error", "code": "invalid_arguments"}}
+  ]
+}
