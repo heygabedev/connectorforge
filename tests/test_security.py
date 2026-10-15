@@ -121,7 +121,7 @@ def test_bearer_auth_is_independent_of_browser_csrf(admin: TestClient) -> None:
 
 
 def test_validation_does_not_echo_credentials(client: TestClient) -> None:
-    secret = "cf_login_" + "s" * 130
+    secret = "cf_login_" + "s" * 130  # pragma: allowlist secret -- synthetic validation input
     response = client.post("/api/v1/auth/login", json={"code": secret})
     assert response.status_code == 422
     assert secret not in response.text

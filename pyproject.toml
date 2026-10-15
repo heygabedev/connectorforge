@@ -31,6 +31,7 @@ dev = [
   "bandit>=1.8,<2",
   "pip-audit>=2.8,<3",
   "httpx2>=2,<3",
+  "detect-secrets>=1.5,<2",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -60,3 +61,7 @@ source = ["connectorforge"]
 [tool.coverage.report]
 show_missing = true
 exclude_also = ["if TYPE_CHECKING:", "if __name__ == .__main__.:"]
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B104"]
