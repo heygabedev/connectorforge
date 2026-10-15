@@ -1,0 +1,67 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "connectorforge"
+version = "0.1.0"
+description = "A local workbench for versioned API connectors"
+requires-python = ">=3.13,<3.14"
+license = "MIT"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn>=0.34,<1",
+  "typer>=0.15,<1",
+  "httpx>=0.28,<1",
+  "sqlalchemy>=2.0,<3",
+  "alembic>=1.15,<2",
+]
+
+[project.scripts]
+connectorforge = "connectorforge.cli:app"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3,<10",
+  "pytest-asyncio>=0.25,<2",
+  "pytest-cov>=6,<8",
+  "ruff>=0.11,<1",
+  "mypy>=1.15,<2",
+  "hypothesis>=6.125,<7",
+  "bandit>=1.8,<2",
+  "pip-audit>=2.8,<3",
+  "httpx2>=2,<3",
+  "detect-secrets>=1.5,<2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/connectorforge"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-ra --strict-markers"
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+files = ["src/connectorforge"]
+
+[tool.coverage.run]
+branch = true
+source = ["connectorforge"]
+
+[tool.coverage.report]
+show_missing = true
+exclude_also = ["if TYPE_CHECKING:", "if __name__ == .__main__.:"]
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B104"]
