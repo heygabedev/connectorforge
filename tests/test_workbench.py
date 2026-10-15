@@ -140,6 +140,20 @@ def test_required_request_body_and_read_only_fields():
         validate_arguments(operation, Arguments(body=None))
 
 
+def test_provider_budget_errors_are_gateway_errors():
+    value = bundle()
+    operation = value["compiled"]["operations"][0]
+    for content in [b"NaN", b'"' + b"x" * 16385 + b'"', b" " * (1024 * 1024 + 1)]:
+        with pytest.raises(Problem) as error:
+            normalize_response(value, operation, httpx.Response(200, content=content))
+        assert error.value.status == 502
+        assert error.value.code == "response_contract"
+    with pytest.raises(Problem) as error:
+        validate_arguments(operation, Arguments(body=float("nan")))
+    assert error.value.status == 422
+    assert error.value.code == "invalid_arguments"
+
+
 def test_timestamp_formats_are_enforced_in_both_directions():
     value = bundle()
     operation = value["compiled"]["operations"][0]

@@ -37,7 +37,12 @@ def operation_by_id(bundle: dict[str, Any], operation_id: str) -> dict[str, Any]
 
 
 def validate_arguments(operation: dict[str, Any], arguments: Arguments) -> None:
-    bounded(arguments.model_dump())
+    try:
+        bounded(arguments.model_dump())
+    except Problem as error:
+        raise Problem(
+            422, "invalid_arguments", "Arguments exceed the JSON validation budget."
+        ) from error
     for location in ("path", "query", "header"):
         declared = {
             param["name"]: param for param in operation["parameters"] if param["in"] == location
@@ -82,11 +87,18 @@ def normalize_response(
         if response.content:
             raise Problem(502, "response_contract", "The response contract declares no body.")
         return None
+    if len(response.content) > 1024 * 1024:
+        raise Problem(502, "response_contract", "Provider response exceeds 1 MiB.")
     try:
         value = response.json()
     except ValueError as error:
         raise Problem(502, "response_contract", "Provider returned malformed JSON.") from error
-    bounded(value)
+    try:
+        bounded(value)
+    except Problem as error:
+        raise Problem(
+            502, "response_contract", "Provider response exceeds its JSON budget."
+        ) from error
     if not Draft202012Validator(
         directional_schema(schema, request=False), format_checker=FormatChecker()
     ).is_valid(value):
