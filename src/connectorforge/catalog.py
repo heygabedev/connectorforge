@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 
 from connectorforge.compiler import compile_document
 from connectorforge.database import Database
+from connectorforge.mappings import FieldMapping, validate_mappings
 from connectorforge.models import Audit, Connector, Release
 from connectorforge.problems import Problem
 from connectorforge.security import Principal, require
@@ -41,6 +42,7 @@ class ReleaseInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     version: str = Field(max_length=32)
     source: str = Field(max_length=1024 * 1024)
+    mappings: dict[str, list[FieldMapping]] = Field(default_factory=dict, max_length=100)
 
 
 def build_bundle(
@@ -56,13 +58,20 @@ def build_bundle(
             422, "invalid_version", "Use a stable semantic version with major 1 or later."
         )
     compiled = compile_document(source)
+    parsed_mappings = {
+        key: [FieldMapping.model_validate(field) for field in fields]
+        for key, fields in (mappings or {}).items()
+    }
+    validate_mappings(parsed_mappings, {operation["id"] for operation in compiled["operations"]})
     return {
         "format": BUNDLE_FORMAT,
         "connector": slug,
         "version": version,
         "compiled": compiled,
         "fixtures": fixtures or {},
-        "mappings": mappings or {},
+        "mappings": {
+            key: [field.model_dump() for field in fields] for key, fields in parsed_mappings.items()
+        },
         "policy": {"version": "1", "deadline_ms": 3000, "attempts": 3},
     }
 
@@ -192,7 +201,17 @@ def list_releases(slug: str, request: Request) -> list[dict[str, Any]]:
 def create_release(slug: str, data: ReleaseInput, request: Request) -> dict[str, str]:
     principal = require(request, "manage", slug)
     release_id = store_release(
-        request.app.state.db, build_bundle(slug, data.version, data.source), principal.id
+        request.app.state.db,
+        build_bundle(
+            slug,
+            data.version,
+            data.source,
+            mappings={
+                key: [field.model_dump() for field in fields]
+                for key, fields in data.mappings.items()
+            },
+        ),
+        principal.id,
     )
     return {"id": release_id, "version": data.version}
 
