@@ -12,6 +12,8 @@ from sqlalchemy.exc import IntegrityError
 
 from connectorforge.compiler import compile_document
 from connectorforge.database import Database
+from connectorforge.execution import PreviewInput, execute_preview
+from connectorforge.fixtures import Fixture, validate_fixtures
 from connectorforge.mappings import FieldMapping, validate_mappings
 from connectorforge.models import Audit, Connector, Release
 from connectorforge.problems import Problem
@@ -43,6 +45,7 @@ class ReleaseInput(BaseModel):
     version: str = Field(max_length=32)
     source: str = Field(max_length=1024 * 1024)
     mappings: dict[str, list[FieldMapping]] = Field(default_factory=dict, max_length=100)
+    fixtures: dict[str, Fixture] = Field(default_factory=dict, max_length=100)
 
 
 def build_bundle(
@@ -58,6 +61,10 @@ def build_bundle(
             422, "invalid_version", "Use a stable semantic version with major 1 or later."
         )
     compiled = compile_document(source)
+    parsed_fixtures = {
+        key: Fixture.model_validate(value) for key, value in (fixtures or {}).items()
+    }
+    validate_fixtures(parsed_fixtures, compiled["operations"])
     parsed_mappings = {
         key: [FieldMapping.model_validate(field) for field in fields]
         for key, fields in (mappings or {}).items()
@@ -68,7 +75,7 @@ def build_bundle(
         "connector": slug,
         "version": version,
         "compiled": compiled,
-        "fixtures": fixtures or {},
+        "fixtures": {key: value.model_dump() for key, value in parsed_fixtures.items()},
         "mappings": {
             key: [field.model_dump() for field in fields] for key, fields in parsed_mappings.items()
         },
@@ -210,6 +217,7 @@ def create_release(slug: str, data: ReleaseInput, request: Request) -> dict[str,
                 key: [field.model_dump() for field in fields]
                 for key, fields in data.mappings.items()
             },
+            fixtures={key: fixture.model_dump() for key, fixture in data.fixtures.items()},
         ),
         principal.id,
     )
@@ -220,3 +228,14 @@ def create_release(slug: str, data: ReleaseInput, request: Request) -> dict[str,
 def get_release(slug: str, release_id: str, request: Request) -> dict[str, Any]:
     require(request, connector=slug)
     return read_release(request.app.state.db, slug, release_id).bundle
+
+
+@router.post("/{slug}/releases/{release_id}/preview")
+async def preview(
+    slug: str, release_id: str, data: PreviewInput, request: Request
+) -> dict[str, Any]:
+    require(request, "invoke", slug, data.operation_id)
+    release = read_release(request.app.state.db, slug, release_id)
+    result = await execute_preview(release.bundle, data)
+    result["meta"]["release"] = release_id
+    return result

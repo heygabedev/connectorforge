@@ -114,7 +114,8 @@ def parse_document(source: str) -> dict[str, Any]:
             for token in yaml.scan(source):
                 if isinstance(token, (AliasToken, AnchorToken, TagToken)):
                     fail("YAML aliases, anchors, and explicit tags are unsupported.")
-            document = yaml.load(source, Loader=StrictLoader)
+            # StrictLoader inherits SafeLoader; the token pass also rejects explicit tags.
+            document = yaml.load(source, Loader=StrictLoader)  # nosec B506
     except (ValueError, yaml.YAMLError, RecursionError, TypeError):
         fail("Cannot parse this specification as JSON or safe YAML.")
     bounded(document)

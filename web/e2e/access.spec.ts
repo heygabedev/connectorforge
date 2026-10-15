@@ -44,3 +44,28 @@ test('viewer navigation is accessible and does not expose credential administrat
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
   await page.screenshot({ path: testInfo.outputPath('workspace.png'), fullPage: true })
 })
+
+test('administrator imports, previews, and diagnoses a custom mock contract', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/')
+  await page.getByLabel('Login code').fill(loginCode('admin'))
+  await page.getByRole('button', { name: 'Continue to workspace' }).click()
+  await page.getByRole('button', { name: 'Connectors', exact: true }).click()
+  await page.getByRole('button', { name: 'New connector' }).click()
+  await page.getByLabel('Connector identifier').fill('custom-inventory')
+  await page.getByLabel('Display name').fill('Custom inventory')
+  await page.getByRole('button', { name: 'Create connector', exact: true }).click()
+  await page.getByRole('button', { name: 'Save connector release' }).click()
+  await expect(page.getByRole('heading', { name: 'Run an isolated preview' })).toBeVisible()
+  await page.getByRole('button', { name: 'Run preview' }).click()
+  await expect(page.getByLabel('Preview response')).toContainText('Demo item')
+  await page.getByLabel('Fault profile').selectOption('malformed')
+  await page.getByRole('button', { name: 'Run preview' }).click()
+  await expect(page.getByRole('alert')).toContainText('malformed JSON')
+  await page.getByLabel('Fault profile').selectOption('none')
+  await page.getByRole('button', { name: 'Run preview' }).click()
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+  await page.screenshot({ path: testInfo.outputPath('workbench.png'), fullPage: true })
+})
