@@ -75,3 +75,22 @@ class AccessToken(Base):
     csrf: Mapped[str | None] = mapped_column(String(64))
     expires_at: Mapped[float] = mapped_column(Float)
     revoked: Mapped[bool] = mapped_column(default=False)
+
+
+class Connector(Base):
+    __tablename__ = "connectors"
+    slug: Mapped[str] = mapped_column(String(48), primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))
+    paused: Mapped[bool] = mapped_column(default=False)
+    generation: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[float] = mapped_column(Float, default=time.time)
+
+
+class Release(Base):
+    __tablename__ = "releases"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    connector: Mapped[str] = mapped_column(ForeignKey("connectors.slug"), index=True)
+    version: Mapped[str] = mapped_column(String(32))
+    major: Mapped[int] = mapped_column(Integer)
+    bundle: Mapped[dict[str, Any]] = mapped_column(JSON)
+    created_at: Mapped[float] = mapped_column(Float, default=time.time)

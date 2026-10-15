@@ -15,6 +15,7 @@ import {
   Workflow,
 } from 'lucide-react'
 import { api, ApiError, setCsrf, type Key, type Session, type Workspace } from './api'
+import Connectors from './Connectors'
 
 function Login({ onLogin }: { onLogin: (session: Session) => void }) {
   const [code, setCode] = useState('')
@@ -362,6 +363,14 @@ export default function App() {
         <div className="nav-label">WORKSPACE</div>
         <nav aria-label="Main navigation">
           <button
+            className={page === 'connectors' ? 'active' : ''}
+            aria-current={page === 'connectors' ? 'page' : undefined}
+            onClick={() => setPage('connectors')}
+          >
+            <Boxes size={18} />
+            Connectors
+          </button>
+          <button
             className={page === 'overview' ? 'active' : ''}
             aria-current={page === 'overview' ? 'page' : undefined}
             onClick={() => setPage('overview')}
@@ -409,7 +418,7 @@ export default function App() {
       <div className="main-column">
         <header className="topbar">
           <span>
-            Workspace <ChevronRight size={14} /> {page === 'access' ? 'Access' : 'Overview'}
+            Workspace <ChevronRight size={14} /> {page[0].toUpperCase() + page.slice(1)}
           </span>
           <span className="tag">DEMO / LOCAL</span>
           <button
@@ -422,7 +431,13 @@ export default function App() {
           </button>
         </header>
         <main id="main" className="content">
-          {page === 'access' && session.data.role === 'admin' ? <Access /> : <Overview />}
+          {page === 'connectors' ? (
+            <Connectors role={session.data.role} />
+          ) : page === 'access' && session.data.role === 'admin' ? (
+            <Access />
+          ) : (
+            <Overview />
+          )}
         </main>
         <footer>
           ConnectorForge <span>Built for inspectable integrations.</span>
