@@ -270,6 +270,23 @@ def create_key(data: KeyInput, request: Request) -> dict[str, str]:
     return {"id": key_id, "token": token}
 
 
+@router.get("/keys")
+def list_keys(request: Request) -> list[dict[str, str | float | bool]]:
+    require(request, "manage")
+    with request.app.state.db.transaction() as session:
+        return [
+            {
+                "id": row.id,
+                "name": row.name,
+                "role": row.role,
+                "expires_at": row.expires_at,
+                "revoked": row.revoked,
+                "expired": row.expires_at <= time.time(),
+            }
+            for row in session.scalars(select(AccessToken).where(AccessToken.kind == "api"))
+        ]
+
+
 @router.delete("/keys/{key_id}", status_code=204)
 def revoke_key(key_id: str, request: Request) -> None:
     principal = require(request, "manage")

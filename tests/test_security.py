@@ -80,6 +80,17 @@ def test_scope_escalation_is_rejected(admin: TestClient) -> None:
     )
 
 
+def test_workspace_and_key_listing_exclude_secrets(admin: TestClient) -> None:
+    key = admin.post("/api/v1/keys", json={"name": "Inspection"}).json()
+    response = admin.get("/api/v1/keys")
+    assert response.status_code == 200
+    assert response.json()[0]["expired"] is False
+    assert key["token"] not in response.text
+    assert "digest" not in response.text
+    assert admin.get("/api/v1/workspace").json()["audit_events"] >= 2
+    assert admin.get("/readyz").json()["status"] == "ready"
+
+
 def test_origin_host_and_body_limits(client: TestClient) -> None:
     assert client.get("/healthz", headers={"host": "attacker.test"}).status_code == 400
     assert client.get("/healthz", headers={"origin": "https://attacker.test"}).status_code == 403

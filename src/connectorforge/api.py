@@ -3,15 +3,19 @@
 from collections import deque
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.staticfiles import StaticFiles
+from sqlalchemy import func, select
 
 from connectorforge import __version__
 from connectorforge.config import Settings
 from connectorforge.database import Database
+from connectorforge.models import Audit, Job
 from connectorforge.problems import Problem, handle_problem, handle_validation
-from connectorforge.security import SecurityBoundary
+from connectorforge.security import SecurityBoundary, require
 from connectorforge.security import router as security_router
 
 
@@ -44,5 +48,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def ready() -> dict[str, str]:
         application.state.db.verify_schema()
         return {"status": "ready"}
+
+    @application.get("/api/v1/workspace", tags=["workspace"])
+    def workspace(request: Request) -> dict[str, str | int]:
+        principal = require(request)
+        with application.state.db.transaction() as session:
+            audits = session.scalar(select(func.count()).select_from(Audit))
+            jobs = session.scalar(select(func.count()).select_from(Job))
+        return {
+            "name": "Local workspace",
+            "role": principal.role,
+            "version": __version__,
+            "audit_events": audits,
+            "jobs": jobs,
+        }
+
+    static = Path(__file__).parent / "static"
+    if not static.exists():
+        static = Path(__file__).resolve().parents[2] / "web" / "dist"
+    if static.exists():
+        application.mount("/", StaticFiles(directory=static, html=True), name="console")
 
     return application
