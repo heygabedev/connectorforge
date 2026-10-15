@@ -138,3 +138,20 @@ def test_required_request_body_and_read_only_fields():
     operation["body"] = None
     with pytest.raises(Problem):
         validate_arguments(operation, Arguments(body=None))
+
+
+def test_timestamp_formats_are_enforced_in_both_directions():
+    value = bundle()
+    operation = value["compiled"]["operations"][0]
+    schema = {"type": "string", "format": "date-time"}
+    operation["body"], operation["body_required"] = schema, True
+    operation["responses"]["200"] = schema
+    with pytest.raises(Problem, match="Request body"):
+        validate_arguments(operation, Arguments(body="not-a-timestamp"))
+    with pytest.raises(Problem, match="declared schema"):
+        normalize_response(value, operation, httpx.Response(200, json="not-a-timestamp"))
+    validate_arguments(operation, Arguments(body="2026-10-15T10:00:00Z"))
+    assert (
+        normalize_response(value, operation, httpx.Response(200, json="2026-10-15T10:00:00+02:00"))
+        == "2026-10-15T10:00:00+02:00"
+    )
